@@ -2,21 +2,21 @@ package filters;
 
 import math.Matrix;
 import math.Vector;
-import models.MotionModel;
+import models.NonlinearMotionModel;
 
-public class KalmanFilter implements Filter {
+public class EKF implements Filter {
 
-    private Vector x;           // State vector
-    private Matrix P;           // Covariance matrix
-    private MotionModel model;  // Motion model (CV, CA, CT, etc.)
-    private Matrix H;           // Measurement matrix
-    private Matrix R;           // Measurement noise
+    private Vector x;                   // state
+    private Matrix P;                   // covariance
+    private NonlinearMotionModel model; // nonlinear motion model
+    private Matrix H;                   // measurement matrix (still linear)
+    private Matrix R;                   // measurement noise
 
-    public KalmanFilter(Vector initialState,
-                        Matrix initialCovariance,
-                        MotionModel model,
-                        Matrix H,
-                        Matrix R) {
+    public EKF(Vector initialState,
+               Matrix initialCovariance,
+               NonlinearMotionModel model,
+               Matrix H,
+               Matrix R) {
 
         this.x = initialState;
         this.P = initialCovariance;
@@ -27,14 +27,14 @@ public class KalmanFilter implements Filter {
 
     @Override
     public void predict(double dt) {
-        // Get F(dt) and Q(dt) from the motion model
-        Matrix F = model.getF(dt);
-        Matrix Q = model.getQ(dt);
+        // Nonlinear propagation
+        Vector xPred = model.f(x, dt);
+        Matrix F = model.F(x, dt);
+        Matrix Q = model.Q(dt);
 
-        // x = F * x
-        x = F.multiply(x);
+        x = xPred;
 
-        // P = F * P * F' + Q
+        // P = F P F' + Q
         Matrix FP = F.multiply(P);
         Matrix Ft = F.transpose();
         P = FP.multiply(Ft).add(Q);
@@ -42,18 +42,18 @@ public class KalmanFilter implements Filter {
 
     @Override
     public void update(Vector z) {
-        // y = z - Hx (innovation)
+        // y = z - Hx
         Vector Hx = H.multiply(x);
         Vector y = z.subtract(Hx);
 
-        // S = HPH' + R
+        // S = H P H' + R
         Matrix HP = H.multiply(P);
         Matrix Ht = H.transpose();
         Matrix S = HP.multiply(Ht).add(R);
 
         // K = P H' S^{-1}
         Matrix PHt = P.multiply(Ht);
-        Matrix S_inv = S.inverse();
+        Matrix S_inv = S.inverse();       // 2x2 in our example
         Matrix K = PHt.multiply(S_inv);
 
         // x = x + K y
@@ -63,8 +63,7 @@ public class KalmanFilter implements Filter {
         // P = (I - K H) P
         Matrix KH = K.multiply(H);
         Matrix I = Matrix.identity(P.rows());
-        Matrix IminusKH = I.add(KH.multiply(-1));
-
+        Matrix IminusKH = I.add(KH.multiply(-1.0));
         P = IminusKH.multiply(P);
     }
 
@@ -76,9 +75,4 @@ public class KalmanFilter implements Filter {
     public Matrix getCovariance() {
         return P;
     }
-
-    public void setMotionModel(models.MotionModel model) {
-    this.model = model;
-}
-
 }
