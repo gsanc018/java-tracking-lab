@@ -11,12 +11,12 @@ public class CTEKFModel implements NonlinearMotionModel {
         this.q = q;
     }
 
-    // Helper: build F matrix for a given omega and dt (like your linear CT, but omega from state)
+    // Build a 5x5 transition matrix for given omega, dt
     private Matrix F_from_omega(double omega, double dt) {
         double w  = omega;
         double wd = w * dt;
 
-        // If turn rate is very small, fall back to CV-style
+        // If turn rate is very small, fall back to CV
         if (Math.abs(w) < 1e-6) {
             return new Matrix(new double[][] {
                     {1.0, 0.0, dt,  0.0, 0.0},
@@ -51,7 +51,7 @@ public class CTEKFModel implements NonlinearMotionModel {
 
     @Override
     public Matrix F(Vector x, double dt) {
-        // Numerical Jacobian: finite differences on f(x, dt)
+        // Numerical Jacobian via finite differences
         int n = x.size();
         Matrix J = new Matrix(n, n);
 
@@ -59,16 +59,16 @@ public class CTEKFModel implements NonlinearMotionModel {
         double eps = 1e-5;
 
         for (int j = 0; j < n; j++) {
-            Vector xPerturbed = new Vector(x.size());
+            Vector xPert = new Vector(n);
             for (int i = 0; i < n; i++) {
-                xPerturbed.set(i, x.get(i));
+                xPert.set(i, x.get(i));
             }
-            xPerturbed.set(j, x.get(j) + eps);
+            xPert.set(j, x.get(j) + eps);
 
-            Vector fPerturbed = f(xPerturbed, dt);
+            Vector fPert = f(xPert, dt);
 
             for (int i = 0; i < n; i++) {
-                double deriv = (fPerturbed.get(i) - fx.get(i)) / eps;
+                double deriv = (fPert.get(i) - fx.get(i)) / eps;
                 J.set(i, j, deriv);
             }
         }
@@ -80,7 +80,7 @@ public class CTEKFModel implements NonlinearMotionModel {
     public Matrix Q(double dt) {
         double dt2 = dt * dt;
 
-        // Simple diagonal Q for now
+        // Very simple diagonal Q: tune later
         return new Matrix(new double[][] {
                 {q * dt2, 0.0,      0.0,     0.0,     0.0},
                 {0.0,     q * dt2,  0.0,     0.0,     0.0},

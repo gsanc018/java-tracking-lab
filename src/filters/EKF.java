@@ -6,20 +6,20 @@ import models.NonlinearMotionModel;
 
 public class EKF implements Filter {
 
-    private Vector x;                   // state
-    private Matrix P;                   // covariance
-    private NonlinearMotionModel model; // nonlinear motion model
-    private Matrix H;                   // measurement matrix (still linear)
-    private Matrix R;                   // measurement noise
+    private Vector x;
+    private Matrix P;
+    private final NonlinearMotionModel model;
+    private final Matrix H;
+    private final Matrix R;
 
-    public EKF(Vector initialState,
-               Matrix initialCovariance,
+    public EKF(Vector x0,
+               Matrix P0,
                NonlinearMotionModel model,
                Matrix H,
                Matrix R) {
 
-        this.x = initialState;
-        this.P = initialCovariance;
+        this.x = x0;
+        this.P = P0;
         this.model = model;
         this.H = H;
         this.R = R;
@@ -34,7 +34,6 @@ public class EKF implements Filter {
 
         x = xPred;
 
-        // P = F P F' + Q
         Matrix FP = F.multiply(P);
         Matrix Ft = F.transpose();
         P = FP.multiply(Ft).add(Q);
@@ -53,7 +52,7 @@ public class EKF implements Filter {
 
         // K = P H' S^{-1}
         Matrix PHt = P.multiply(Ht);
-        Matrix S_inv = S.inverse();       // 2x2 in our example
+        Matrix S_inv = S.inverse();
         Matrix K = PHt.multiply(S_inv);
 
         // x = x + K y
