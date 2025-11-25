@@ -1,15 +1,27 @@
 package tracking;
 
 import math.Vector;
+import math.Matrix;
 
 public class AdaptiveTrack {
 
     private final HorizontalChannel horizontal;
     private final VerticalChannel vertical;
 
-    public AdaptiveTrack(HorizontalChannel horizontal, VerticalChannel vertical) {
+    private int id;
+    private int lastUpdateTime;
+
+    public AdaptiveTrack(int id,
+                         HorizontalChannel horizontal,
+                         VerticalChannel vertical) {
+        this.id = id;
         this.horizontal = horizontal;
         this.vertical = vertical;
+        this.lastUpdateTime = 0;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public void predict(double dt) {
@@ -17,9 +29,14 @@ public class AdaptiveTrack {
         vertical.predict(dt);
     }
 
-    public void update(Vector z_xy, Vector z_z) {
-        if (z_xy != null) horizontal.update(z_xy);
-        if (z_z != null) vertical.update(z_z);
+    public void update(Vector measXY, Vector measZ, int time) {
+        if (measXY != null) {
+            horizontal.update(measXY);
+        }
+        if (measZ != null) {
+            vertical.update(measZ);
+        }
+        this.lastUpdateTime = time;
     }
 
     public Vector getHorizontalState() {
@@ -28,5 +45,17 @@ public class AdaptiveTrack {
 
     public Vector getVerticalState() {
         return vertical.getState();
+    }
+
+    public HorizontalChannel.Mode getHorizontalMode() {
+        return horizontal.getMode();
+    }
+
+    public VerticalChannel.Mode getVerticalMode() {
+        return vertical.getMode();
+    }
+
+    public int getLastUpdateTime() {
+        return lastUpdateTime;
     }
 }
